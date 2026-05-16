@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
+import sys
 from uuid import uuid4
 
 try:
@@ -10,10 +12,7 @@ try:
     from .models import Candle, Order, Signal, TradeResult
     from .open_points import OPEN_POINTS
 except ImportError:
-    import sys
-    from pathlib import Path
-
-    src_root = str(Path(__file__).resolve().parents[1])
+    src_root = str(Path(__file__).resolve().parent.parent)
     if src_root not in sys.path:
         sys.path.append(src_root)
     from kronos_x.engine import TradingEngine
