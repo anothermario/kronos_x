@@ -4,7 +4,7 @@ from src.kronos_x.main import run_demo
 
 
 class TestEngine(unittest.TestCase):
-    def test_run_demo_returns_event(self) -> None:
+    def test_run_demo_returns_event_with_required_fields(self) -> None:
         event = run_demo()
         self.assertIn("symbol", event)
         self.assertIn("signal", event)
