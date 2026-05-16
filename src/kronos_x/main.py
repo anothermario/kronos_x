@@ -13,7 +13,9 @@ except ImportError:
     import sys
     from pathlib import Path
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    src_root = str(Path(__file__).resolve().parents[1])
+    if src_root not in sys.path:
+        sys.path.append(src_root)
     from kronos_x.engine import TradingEngine
     from kronos_x.journal import JsonlJournal
     from kronos_x.models import Candle, Order, Signal, TradeResult
