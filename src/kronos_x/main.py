@@ -4,10 +4,20 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from .engine import TradingEngine
-from .journal import JsonlJournal
-from .models import Candle, Order, Signal, TradeResult
-from .open_points import OPEN_POINTS
+try:
+    from .engine import TradingEngine
+    from .journal import JsonlJournal
+    from .models import Candle, Order, Signal, TradeResult
+    from .open_points import OPEN_POINTS
+except ImportError:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from kronos_x.engine import TradingEngine
+    from kronos_x.journal import JsonlJournal
+    from kronos_x.models import Candle, Order, Signal, TradeResult
+    from kronos_x.open_points import OPEN_POINTS
 
 
 @dataclass
