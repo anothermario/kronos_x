@@ -22,5 +22,6 @@ Please tell me what to use instead of the davidddtech part, so I can wire the re
 ## Run
 ```bash
 python -m src.kronos_x.main
+streamlit run streamlit_app.py
 python -m unittest discover -s tests -q
 ```

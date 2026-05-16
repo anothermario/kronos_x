@@ -6,6 +6,11 @@ from pathlib import Path
 import sys
 from uuid import uuid4
 
+try:
+    import streamlit as st
+except ModuleNotFoundError:
+    st = None
+
 if __package__:
     from .engine import TradingEngine
     from .journal import JsonlJournal
@@ -109,9 +114,41 @@ def run_demo(symbol: str = "BTCUSDT") -> dict:
     return engine.run_once()
 
 
+def render_streamlit_app(default_symbol: str = "BTCUSDT") -> None:
+    if st is None:
+        raise RuntimeError("streamlit is not installed. Install it to run the web app.")
+
+    st.set_page_config(page_title="kronos_x", layout="centered")
+    st.title("kronos_x")
+    st.caption("Trading engine demo")
+
+    symbol = st.text_input("Symbol", value=default_symbol).strip().upper()
+    if not symbol:
+        symbol = default_symbol
+    if st.button("Run demo cycle", type="primary"):
+        event = run_demo(symbol=symbol)
+        st.subheader("Latest event")
+        st.json(event)
+
+    with st.expander("Open points"):
+        for key, value in OPEN_POINTS.items():
+            st.write(f"- **{key}**: {value}")
+
+
+def _running_in_streamlit() -> bool:
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    except ModuleNotFoundError:
+        return False
+    return get_script_run_ctx() is not None
+
+
 if __name__ == "__main__":
-    event = run_demo()
-    print(event)
-    print("OPEN_POINTS:")
-    for key, value in OPEN_POINTS.items():
-        print(f"- {key}: {value}")
+    if _running_in_streamlit():
+        render_streamlit_app()
+    else:
+        event = run_demo()
+        print(event)
+        print("OPEN_POINTS:")
+        for key, value in OPEN_POINTS.items():
+            print(f"- {key}: {value}")
