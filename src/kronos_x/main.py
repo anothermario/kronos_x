@@ -62,7 +62,9 @@ class BasicRisk:
         price = float(signal.metadata.get("price", 0.0))
         if price <= 0:
             return None
-        qty = max((equity * self.risk_fraction) / price, self.min_quantity)
+        qty = (equity * self.risk_fraction) / price
+        if qty < self.min_quantity:
+            return None
         return Order(symbol=signal.symbol, side=signal.side, quantity=round(qty, 6), timestamp=signal.timestamp)
 
 
