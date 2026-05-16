@@ -6,12 +6,12 @@ from pathlib import Path
 import sys
 from uuid import uuid4
 
-try:
+if __package__:
     from .engine import TradingEngine
     from .journal import JsonlJournal
     from .models import Candle, Order, Signal, TradeResult
     from .open_points import OPEN_POINTS
-except ImportError:
+else:
     src_root = str(Path(__file__).resolve().parent.parent)
     if src_root not in sys.path:
         sys.path.append(src_root)
