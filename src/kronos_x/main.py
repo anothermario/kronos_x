@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from .engine import TradingEngine
 from .journal import JsonlJournal
@@ -53,6 +54,7 @@ class BasicMomentumStrategy:
 @dataclass
 class BasicRisk:
     risk_fraction: float = 0.01
+    min_quantity: float = 0.001
 
     def to_order(self, signal: Signal, equity: float) -> Order | None:
         if signal.side == "hold":
@@ -60,14 +62,14 @@ class BasicRisk:
         price = float(signal.metadata.get("price", 0.0))
         if price <= 0:
             return None
-        qty = max((equity * self.risk_fraction) / price, 0.001)
+        qty = max((equity * self.risk_fraction) / price, self.min_quantity)
         return Order(symbol=signal.symbol, side=signal.side, quantity=round(qty, 6), timestamp=signal.timestamp)
 
 
 @dataclass
 class PaperBroker:
     def submit(self, order: Order) -> TradeResult:
-        return TradeResult(accepted=True, message="paper_fill", order_id=f"paper-{int(order.timestamp.timestamp())}")
+        return TradeResult(accepted=True, message="paper_fill", order_id=f"paper-{uuid4()}")
 
 
 def run_demo(symbol: str = "BTCUSDT") -> dict:
