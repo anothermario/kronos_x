@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from src.kronos_x.main import BasicRisk, PaperBroker, run_demo
 from src.kronos_x.models import Order, Signal
 
+FIXED_TS = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
 
 class TestEngine(unittest.TestCase):
     def test_run_demo_returns_event_with_required_fields(self) -> None:
@@ -19,7 +21,7 @@ class TestEngine(unittest.TestCase):
             side="hold",
             confidence=0.5,
             reason="no_edge",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=FIXED_TS,
             metadata={"price": 100.0},
         )
         self.assertIsNone(risk.to_order(signal, 10_000.0))
@@ -31,7 +33,7 @@ class TestEngine(unittest.TestCase):
             side="buy",
             confidence=0.6,
             reason="entry",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=FIXED_TS,
             metadata={"price": 0.0},
         )
         self.assertIsNone(risk.to_order(signal, 10_000.0))
@@ -43,7 +45,7 @@ class TestEngine(unittest.TestCase):
             side="buy",
             confidence=0.6,
             reason="entry",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=FIXED_TS,
             metadata={"price": 100.0},
         )
         self.assertIsNone(risk.to_order(signal, 10_000.0))
@@ -54,7 +56,7 @@ class TestEngine(unittest.TestCase):
             symbol="BTCUSDT",
             side="hold",
             quantity=0.0,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=FIXED_TS,
         )
         result = broker.submit(bad_order)
         self.assertFalse(result.accepted)
