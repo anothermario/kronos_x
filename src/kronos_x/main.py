@@ -2,12 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
+import sys
 from uuid import uuid4
 
-from .engine import TradingEngine
-from .journal import JsonlJournal
-from .models import Candle, Order, Signal, TradeResult
-from .open_points import OPEN_POINTS
+if __package__:
+    from .engine import TradingEngine
+    from .journal import JsonlJournal
+    from .models import Candle, Order, Signal, TradeResult
+    from .open_points import OPEN_POINTS
+else:
+    src_root = str(Path(__file__).resolve().parent.parent)
+    if src_root not in sys.path:
+        sys.path.append(src_root)
+    from kronos_x.engine import TradingEngine
+    from kronos_x.journal import JsonlJournal
+    from kronos_x.models import Candle, Order, Signal, TradeResult
+    from kronos_x.open_points import OPEN_POINTS
 
 
 @dataclass
