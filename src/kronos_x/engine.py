@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from .interfaces import Broker, Journal, MarketDataProvider, RiskManager, StrategyEngine
 
@@ -21,7 +20,7 @@ class TradingEngine:
         signal = self.strategy.generate_signal(candle)
 
         event: dict = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": candle.timestamp.isoformat(),
             "symbol": self.symbol,
             "close": candle.close,
             "signal": {

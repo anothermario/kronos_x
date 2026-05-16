@@ -10,5 +10,10 @@ class JsonlJournal:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def write_event(self, event: dict) -> None:
+        try:
+            payload = json.dumps(event, ensure_ascii=False)
+        except TypeError as exc:
+            raise ValueError(f"Event is not JSON serializable: {event}") from exc
+
         with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+            f.write(payload + "\n")

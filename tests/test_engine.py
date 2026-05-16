@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timezone
 
-from src.kronos_x.main import BasicRisk, run_demo
-from src.kronos_x.models import Signal
+from src.kronos_x.main import BasicRisk, PaperBroker, run_demo
+from src.kronos_x.models import Order, Signal
 
 
 class TestEngine(unittest.TestCase):
@@ -47,6 +47,17 @@ class TestEngine(unittest.TestCase):
             metadata={"price": 100.0},
         )
         self.assertIsNone(risk.to_order(signal, 10_000.0))
+
+    def test_paper_broker_rejects_invalid_order(self) -> None:
+        broker = PaperBroker()
+        bad_order = Order(
+            symbol="BTCUSDT",
+            side="hold",
+            quantity=0.0,
+            timestamp=datetime.now(timezone.utc),
+        )
+        result = broker.submit(bad_order)
+        self.assertFalse(result.accepted)
 
 
 if __name__ == "__main__":

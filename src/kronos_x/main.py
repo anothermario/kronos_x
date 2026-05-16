@@ -71,6 +71,10 @@ class BasicRisk:
 @dataclass
 class PaperBroker:
     def submit(self, order: Order) -> TradeResult:
+        if order.side not in {"buy", "sell"}:
+            return TradeResult(accepted=False, message="invalid_side")
+        if order.quantity <= 0:
+            return TradeResult(accepted=False, message="invalid_quantity")
         return TradeResult(accepted=True, message="paper_fill", order_id=f"paper-{uuid4()}")
 
 
