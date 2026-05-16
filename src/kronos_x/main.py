@@ -48,7 +48,14 @@ class BasicMomentumStrategy:
                 candle.timestamp,
                 metadata={"price": candle.close},
             )
-        return Signal(candle.symbol, "hold", 0.5, "no_edge", candle.timestamp, metadata={"price": candle.close})
+        return Signal(
+            symbol=candle.symbol,
+            side="hold",
+            confidence=0.5,
+            reason="no_edge",
+            timestamp=candle.timestamp,
+            metadata={"price": candle.close},
+        )
 
 
 @dataclass
