@@ -22,5 +22,5 @@ Please tell me what to use instead of the davidddtech part, so I can wire the re
 ## Run
 ```bash
 python -m src.kronos_x.main
-python -m pytest -q
+python -m unittest discover -s tests -q
 ```
