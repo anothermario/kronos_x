@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import os
 from pathlib import Path
 import sys
 from uuid import uuid4
+
+try:
+    import streamlit as st
+except ModuleNotFoundError:
+    st = None
 
 if __package__:
     from .engine import TradingEngine
@@ -111,13 +115,16 @@ def run_demo(symbol: str = "BTCUSDT") -> dict:
 
 
 def render_streamlit_app(default_symbol: str = "BTCUSDT") -> None:
-    import streamlit as st
+    if st is None:
+        raise RuntimeError("streamlit is not installed. Install it to run the web app.")
 
     st.set_page_config(page_title="kronos_x", layout="centered")
     st.title("kronos_x")
     st.caption("Trading engine demo")
 
-    symbol = st.text_input("Symbol", value=default_symbol).strip().upper() or default_symbol
+    symbol = st.text_input("Symbol", value=default_symbol).strip().upper()
+    if not symbol:
+        symbol = default_symbol
     if st.button("Run demo cycle", type="primary"):
         event = run_demo(symbol=symbol)
         st.subheader("Latest event")
@@ -129,7 +136,11 @@ def render_streamlit_app(default_symbol: str = "BTCUSDT") -> None:
 
 
 def _running_in_streamlit() -> bool:
-    return bool(os.getenv("STREAMLIT_SERVER_PORT"))
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+    except ModuleNotFoundError:
+        return False
+    return get_script_run_ctx() is not None
 
 
 if __name__ == "__main__":
