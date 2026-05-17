@@ -213,7 +213,8 @@ def render_polymarket_dashboard() -> None:
         refresh_btn = st.button("🔄 Refresh Now", use_container_width=True)
 
     if auto_refresh:
-        # lightweight JS-based page reload every 30 seconds
+        # Static, trusted script — no user input involved.
+        # Reloads the page every 30 seconds to pull fresh data.
         components.html(
             "<script>setTimeout(()=>window.location.reload(),30000);</script>",
             height=0,
@@ -230,7 +231,6 @@ def render_polymarket_dashboard() -> None:
         except Exception as exc:
             st.error(f"Failed to fetch data: {exc}")
             st.stop()
-            return
 
     # ── timestamp ─────────────────────────────────────────────────────────────
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")

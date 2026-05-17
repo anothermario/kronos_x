@@ -11,7 +11,7 @@ st.set_page_config(
 
 st.sidebar.title("kronos_x")
 page = st.sidebar.radio(
-    "Page",
+    "Select Dashboard",
     options=["₿ BTC/USD Futures Dashboard", "⚙️ Trading Engine Demo"],
 )
 

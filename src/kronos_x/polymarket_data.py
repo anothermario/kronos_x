@@ -22,8 +22,13 @@ def _get(path: str, params: dict[str, str] | None = None) -> Any:
         qs = "&".join(f"{k}={v}" for k, v in params.items())
         url = f"{url}?{qs}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"Binance API HTTP error {exc.code} for {path}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Binance API connection error for {path}: {exc.reason}") from exc
 
 
 def fetch_ticker() -> dict[str, Any]:
@@ -61,7 +66,8 @@ def fetch_open_interest() -> dict[str, Any]:
     try:
         ticker = _get("/fapi/v1/ticker/price", {"symbol": _SYMBOL})
         last = float(ticker.get("price", 0))
-    except Exception:
+    except RuntimeError:
+        # USD conversion unavailable; return contracts only
         last = 0.0
     return {
         "open_interest_contracts": oi_contracts,
