@@ -118,7 +118,6 @@ def render_streamlit_app(default_symbol: str = "BTCUSDT") -> None:
     if st is None:
         raise RuntimeError("streamlit is not installed. Install it to run the web app.")
 
-    st.set_page_config(page_title="kronos_x", layout="centered")
     st.title("kronos_x")
     st.caption("Trading engine demo")
 
