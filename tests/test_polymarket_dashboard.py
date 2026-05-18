@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from src.kronos_x import polymarket_dashboard as dashboard
 
@@ -16,16 +17,11 @@ class TestPolymarketDashboardFallback(unittest.TestCase):
         self.assertEqual(10, len(payload["depth"]["asks"]))
 
     def test_load_dashboard_data_returns_fallback_on_fetch_failure(self) -> None:
-        original_fetch_ticker = dashboard.fetch_ticker
-
         def _raise_error() -> dict:
             raise RuntimeError("boom")
 
-        try:
-            dashboard.fetch_ticker = _raise_error  # type: ignore[assignment]
+        with patch.object(dashboard, "fetch_ticker", side_effect=_raise_error):
             payload = dashboard._load_dashboard_data(interval="1h", limit=24)
-        finally:
-            dashboard.fetch_ticker = original_fetch_ticker  # type: ignore[assignment]
 
         self.assertEqual("lite_fallback", payload["source"])
         self.assertIn("boom", payload["error"])

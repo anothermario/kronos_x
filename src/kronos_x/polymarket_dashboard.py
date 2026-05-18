@@ -31,6 +31,13 @@ from .polymarket_data import (
 )
 
 SOURCE_LIVE = "live"
+FALLBACK_DEFAULT_INTERVAL_MS = 3_600_000  # 1h
+FALLBACK_PRICE_DRIFT_PER_CANDLE = 6.0
+FALLBACK_UP_CANDLE_DELTA = 8.0
+FALLBACK_DOWN_CANDLE_DELTA = -5.0
+FALLBACK_WICK_SIZE = 6.0
+FALLBACK_TAKER_BUY_RATIO_HIGH = 0.52
+FALLBACK_TAKER_BUY_RATIO_LOW = 0.48
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +77,7 @@ def _interval_ms(interval: str) -> int:
         "4h": 14_400_000,
         "1d": 86_400_000,
     }
-    return mapping.get(interval, 3_600_000)
+    return mapping.get(interval, FALLBACK_DEFAULT_INTERVAL_MS)
 
 
 def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
@@ -81,13 +88,14 @@ def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
     candles: list[dict[str, Any]] = []
 
     for i in range(limit):
-        drift = (i - (limit / 2)) * 6.0
+        drift = (i - (limit / 2)) * FALLBACK_PRICE_DRIFT_PER_CANDLE
         open_price = base + drift
-        close_price = open_price + (8.0 if i % 2 == 0 else -5.0)
-        high_price = max(open_price, close_price) + 6.0
-        low_price = min(open_price, close_price) - 6.0
+        close_price = open_price + (FALLBACK_UP_CANDLE_DELTA if i % 2 == 0 else FALLBACK_DOWN_CANDLE_DELTA)
+        high_price = max(open_price, close_price) + FALLBACK_WICK_SIZE
+        low_price = min(open_price, close_price) - FALLBACK_WICK_SIZE
         volume = 900.0 + (i * 11.0)
-        taker_buy = volume * (0.52 if i % 3 != 0 else 0.48)
+        taker_buy_ratio = FALLBACK_TAKER_BUY_RATIO_HIGH if i % 3 != 0 else FALLBACK_TAKER_BUY_RATIO_LOW
+        taker_buy = volume * taker_buy_ratio
         open_time = now_ms - ((limit - i) * candle_ms)
         close_time = open_time + candle_ms - 1
         candles.append(
