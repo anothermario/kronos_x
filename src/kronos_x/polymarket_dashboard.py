@@ -30,6 +30,8 @@ from .polymarket_data import (
     fetch_ticker,
 )
 
+SOURCE_LIVE = "live"
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -149,7 +151,7 @@ def _load_dashboard_data(interval: str, limit: int) -> dict[str, Any]:
             "oi": fetch_open_interest(),
             "candles": fetch_klines(interval=interval, limit=limit),
             "depth": fetch_order_book_depth(),
-            "source": "live",
+            "source": SOURCE_LIVE,
             "error": None,
         }
     except Exception as exc:
@@ -251,7 +253,7 @@ def _render_lite_orientation(ticker: dict[str, Any], candles: list[dict], source
 
     st.subheader("🧭 Dashboard Orientation")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Data Source", "Live" if source == "live" else "Lite fallback")
+    c1.metric("Data Source", "Live" if source == SOURCE_LIVE else "Lite fallback")
     c2.metric("Window Trend", trend)
     c3.metric("Candles Loaded", f"{len(candles)}")
     st.caption("Core view: price trend, 24h move, participation, and order flow pressure.")
@@ -329,6 +331,7 @@ def render_polymarket_dashboard() -> None:
         refresh_btn = st.button("🔄 Refresh Now", use_container_width=True)
 
     if refresh_btn:
+        # Streamlit added st.rerun in newer versions; keep legacy fallback for compatibility.
         rerun_fn = getattr(st, "rerun", None) or getattr(st, "experimental_rerun", None)
         if callable(rerun_fn):
             rerun_fn()
@@ -353,7 +356,7 @@ def render_polymarket_dashboard() -> None:
     source = dashboard_data["source"]
     error = dashboard_data["error"]
 
-    if source != "live":
+    if source != SOURCE_LIVE:
         st.warning("Live market data unavailable. Showing lite orientation mode.")
         st.caption(f"Fetch error: {error}")
 

@@ -17,8 +17,12 @@ class TestPolymarketDashboardFallback(unittest.TestCase):
 
     def test_load_dashboard_data_returns_fallback_on_fetch_failure(self) -> None:
         original_fetch_ticker = dashboard.fetch_ticker
+
+        def _raise_error() -> dict:
+            raise RuntimeError("boom")
+
         try:
-            dashboard.fetch_ticker = lambda: (_ for _ in ()).throw(RuntimeError("boom"))  # type: ignore[assignment]
+            dashboard.fetch_ticker = _raise_error  # type: ignore[assignment]
             payload = dashboard._load_dashboard_data(interval="1h", limit=24)
         finally:
             dashboard.fetch_ticker = original_fetch_ticker  # type: ignore[assignment]
