@@ -38,6 +38,12 @@ FALLBACK_DOWN_CANDLE_DELTA = -5.0
 FALLBACK_WICK_SIZE = 6.0
 FALLBACK_TAKER_BUY_RATIO_HIGH = 0.52
 FALLBACK_TAKER_BUY_RATIO_LOW = 0.48
+FALLBACK_INDEX_PRICE_OFFSET = 2.0
+FALLBACK_FUNDING_HOURS = 8
+FALLBACK_OPEN_INTEREST_CONTRACTS = 48_000.0
+FALLBACK_PRICE_STEP = 5.0
+FALLBACK_BASE_QUANTITY = 2.5
+FALLBACK_QUANTITY_INCREMENT = 0.2
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -135,18 +141,24 @@ def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
         },
         "funding": {
             "mark_price": last_close,
-            "index_price": last_close - 2.0,
+            "index_price": last_close - FALLBACK_INDEX_PRICE_OFFSET,
             "funding_rate": 0.0001,
-            "next_funding_time_ms": now_ms + 8 * 3_600_000,
+            "next_funding_time_ms": now_ms + FALLBACK_FUNDING_HOURS * 3_600_000,
         },
         "oi": {
-            "open_interest_contracts": 48_000.0,
-            "open_interest_usd": 48_000.0 * last_close,
+            "open_interest_contracts": FALLBACK_OPEN_INTEREST_CONTRACTS,
+            "open_interest_usd": FALLBACK_OPEN_INTEREST_CONTRACTS * last_close,
         },
         "candles": candles,
         "depth": {
-            "bids": [[last_close - i * 5.0, 2.5 + i * 0.2] for i in range(1, 11)],
-            "asks": [[last_close + i * 5.0, 2.5 + i * 0.2] for i in range(1, 11)],
+            "bids": [
+                [last_close - i * FALLBACK_PRICE_STEP, FALLBACK_BASE_QUANTITY + i * FALLBACK_QUANTITY_INCREMENT]
+                for i in range(1, 11)
+            ],
+            "asks": [
+                [last_close + i * FALLBACK_PRICE_STEP, FALLBACK_BASE_QUANTITY + i * FALLBACK_QUANTITY_INCREMENT]
+                for i in range(1, 11)
+            ],
         },
     }
 
@@ -254,8 +266,12 @@ def _render_price_chart(candles: list[dict], interval: str) -> None:
 
 
 def _render_lite_orientation(ticker: dict[str, Any], candles: list[dict], source: str) -> None:
-    first_close = candles[0]["close"] if candles else ticker["last_price"]
-    last_close = candles[-1]["close"] if candles else ticker["last_price"]
+    if candles:
+        first_close = candles[0]["close"]
+        last_close = candles[-1]["close"]
+    else:
+        first_close = ticker["last_price"]
+        last_close = ticker["last_price"]
     if last_close > first_close:
         trend = "Uptrend"
     elif last_close < first_close:
