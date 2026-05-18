@@ -59,6 +59,106 @@ def _color(v: float) -> str:
     return "green" if v >= 0 else "red"
 
 
+def _interval_ms(interval: str) -> int:
+    mapping = {
+        "1m": 60_000,
+        "5m": 300_000,
+        "15m": 900_000,
+        "1h": 3_600_000,
+        "4h": 14_400_000,
+        "1d": 86_400_000,
+    }
+    return mapping.get(interval, 3_600_000)
+
+
+def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
+    """Create minimal local data so dashboard still renders when live fetch fails."""
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    candle_ms = _interval_ms(interval)
+    base = 65_000.0
+    candles: list[dict[str, Any]] = []
+
+    for i in range(limit):
+        drift = (i - (limit / 2)) * 6.0
+        open_price = base + drift
+        close_price = open_price + (8.0 if i % 2 == 0 else -5.0)
+        high_price = max(open_price, close_price) + 6.0
+        low_price = min(open_price, close_price) - 6.0
+        volume = 900.0 + (i * 11.0)
+        taker_buy = volume * (0.52 if i % 3 != 0 else 0.48)
+        open_time = now_ms - ((limit - i) * candle_ms)
+        close_time = open_time + candle_ms - 1
+        candles.append(
+            {
+                "open_time_ms": open_time,
+                "open": open_price,
+                "high": high_price,
+                "low": low_price,
+                "close": close_price,
+                "volume": volume,
+                "close_time_ms": close_time,
+                "quote_volume": volume * close_price,
+                "trades": 1_000 + i * 4,
+                "taker_buy_volume": taker_buy,
+                "taker_buy_quote_volume": taker_buy * close_price,
+            }
+        )
+
+    first_close = candles[0]["close"]
+    last_close = candles[-1]["close"]
+    price_change = last_close - first_close
+    pct_change = (price_change / first_close * 100) if first_close else 0.0
+    total_volume = sum(c["volume"] for c in candles)
+    quote_volume = sum(c["quote_volume"] for c in candles)
+
+    return {
+        "ticker": {
+            "symbol": "BTCUSDT",
+            "last_price": last_close,
+            "price_change": price_change,
+            "price_change_pct": pct_change,
+            "high_24h": max(c["high"] for c in candles),
+            "low_24h": min(c["low"] for c in candles),
+            "volume_24h": total_volume,
+            "quote_volume_24h": quote_volume,
+            "trades_24h": sum(c["trades"] for c in candles),
+        },
+        "funding": {
+            "mark_price": last_close,
+            "index_price": last_close - 2.0,
+            "funding_rate": 0.0001,
+            "next_funding_time_ms": now_ms + 8 * 3_600_000,
+        },
+        "oi": {
+            "open_interest_contracts": 48_000.0,
+            "open_interest_usd": 48_000.0 * last_close,
+        },
+        "candles": candles,
+        "depth": {
+            "bids": [[last_close - i * 5.0, 2.5 + i * 0.2] for i in range(1, 11)],
+            "asks": [[last_close + i * 5.0, 2.5 + i * 0.2] for i in range(1, 11)],
+        },
+    }
+
+
+def _load_dashboard_data(interval: str, limit: int) -> dict[str, Any]:
+    try:
+        return {
+            "ticker": fetch_ticker(),
+            "funding": fetch_funding_rate(),
+            "oi": fetch_open_interest(),
+            "candles": fetch_klines(interval=interval, limit=limit),
+            "depth": fetch_order_book_depth(),
+            "source": "live",
+            "error": None,
+        }
+    except Exception as exc:
+        fallback = _build_lite_fallback_data(interval=interval, limit=limit)
+        fallback["source"] = "lite_fallback"
+        fallback["error"] = str(exc)
+        return fallback
+
+
 def _bull_bear_pct(candles: list[dict]) -> tuple[float, float]:
     """Derive bull/bear sentiment from taker-buy volume ratio over last N candles."""
     total_vol = sum(c["volume"] for c in candles if c["volume"] > 0)
@@ -99,13 +199,11 @@ def _render_kpi_banner(ticker: dict, funding: dict, oi: dict) -> None:
 
 
 def _render_price_chart(candles: list[dict], interval: str) -> None:
-    if pd is None:
-        st.warning("pandas not installed — chart unavailable.")
-        return
-
-    df = pd.DataFrame(candles)
-    df["time"] = pd.to_datetime(df["open_time_ms"], unit="ms", utc=True)
-    df = df.set_index("time")
+    times = [datetime.fromtimestamp(c["open_time_ms"] / 1000, tz=timezone.utc) for c in candles]
+    opens = [c["open"] for c in candles]
+    highs = [c["high"] for c in candles]
+    lows = [c["low"] for c in candles]
+    closes = [c["close"] for c in candles]
 
     # Try plotly for candlestick, fall back to line chart
     try:
@@ -114,11 +212,11 @@ def _render_price_chart(candles: list[dict], interval: str) -> None:
         fig = go.Figure(
             data=[
                 go.Candlestick(
-                    x=df.index,
-                    open=df["open"],
-                    high=df["high"],
-                    low=df["low"],
-                    close=df["close"],
+                    x=times,
+                    open=opens,
+                    high=highs,
+                    low=lows,
+                    close=closes,
                     name="BTCUSDT",
                     increasing_line_color="#26a69a",
                     decreasing_line_color="#ef5350",
@@ -138,7 +236,25 @@ def _render_price_chart(candles: list[dict], interval: str) -> None:
         st.plotly_chart(fig, use_container_width=True)
     except ModuleNotFoundError:
         # fallback: simple line chart
-        st.line_chart(df[["close"]], height=320)
+        st.line_chart(closes, height=320)
+
+
+def _render_lite_orientation(ticker: dict[str, Any], candles: list[dict], source: str) -> None:
+    first_close = candles[0]["close"] if candles else ticker["last_price"]
+    last_close = candles[-1]["close"] if candles else ticker["last_price"]
+    if last_close > first_close:
+        trend = "Uptrend"
+    elif last_close < first_close:
+        trend = "Downtrend"
+    else:
+        trend = "Flat"
+
+    st.subheader("🧭 Dashboard Orientation")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Data Source", "Live" if source == "live" else "Lite fallback")
+    c2.metric("Window Trend", trend)
+    c3.metric("Candles Loaded", f"{len(candles)}")
+    st.caption("Core view: price trend, 24h move, participation, and order flow pressure.")
 
 
 # ── bull/bear outcome panel ───────────────────────────────────────────────────
@@ -212,6 +328,11 @@ def render_polymarket_dashboard() -> None:
         auto_refresh = st.checkbox("Auto-refresh (30 s)", value=False)
         refresh_btn = st.button("🔄 Refresh Now", use_container_width=True)
 
+    if refresh_btn:
+        rerun_fn = getattr(st, "rerun", None) or getattr(st, "experimental_rerun", None)
+        if callable(rerun_fn):
+            rerun_fn()
+
     if auto_refresh:
         # Static, trusted script — no user input involved.
         # Reloads the page every 30 seconds to pull fresh data.
@@ -222,19 +343,25 @@ def render_polymarket_dashboard() -> None:
 
     # ── data fetch ────────────────────────────────────────────────────────────
     with st.spinner("Fetching live data …"):
-        try:
-            ticker = fetch_ticker()
-            funding = fetch_funding_rate()
-            oi = fetch_open_interest()
-            candles = fetch_klines(interval=interval, limit=limit)
-            depth = fetch_order_book_depth()
-        except Exception as exc:
-            st.error(f"Failed to fetch data: {exc}")
-            st.stop()
+        dashboard_data = _load_dashboard_data(interval=interval, limit=limit)
+
+    ticker = dashboard_data["ticker"]
+    funding = dashboard_data["funding"]
+    oi = dashboard_data["oi"]
+    candles = dashboard_data["candles"]
+    depth = dashboard_data["depth"]
+    source = dashboard_data["source"]
+    error = dashboard_data["error"]
+
+    if source != "live":
+        st.warning("Live market data unavailable. Showing lite orientation mode.")
+        st.caption(f"Fetch error: {error}")
 
     # ── timestamp ─────────────────────────────────────────────────────────────
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     st.caption(f"Last updated: {now_utc}")
+
+    _render_lite_orientation(ticker=ticker, candles=candles, source=source)
 
     # ── KPI banner ────────────────────────────────────────────────────────────
     _render_kpi_banner(ticker, funding, oi)

@@ -9,6 +9,7 @@ Initial trading framework scaffold, created to implement what is unblocked right
 - JSONL journal sink at `logs/trading_events.jsonl`
 - Runnable demo with mock providers (`python -m src.kronos_x.main`)
 - Basic test for engine demo behavior
+- Streamlit BTC dashboard now has a lite fallback mode so orientation metrics and chart still render if live fetch fails
 
 ## Open points (explicitly left TBD)
 See `src/kronos_x/open_points.py`.
