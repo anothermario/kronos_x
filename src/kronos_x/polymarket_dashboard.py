@@ -238,7 +238,11 @@ def _render_price_chart(candles: list[dict], interval: str) -> None:
         st.plotly_chart(fig, use_container_width=True)
     except ModuleNotFoundError:
         # fallback: simple line chart
-        st.line_chart(closes, height=320)
+        if pd is not None:
+            chart_df = pd.DataFrame({"close": closes}, index=times)
+            st.line_chart(chart_df, height=320)
+        else:
+            st.line_chart(closes, height=320)
 
 
 def _render_lite_orientation(ticker: dict[str, Any], candles: list[dict], source: str) -> None:
@@ -253,7 +257,8 @@ def _render_lite_orientation(ticker: dict[str, Any], candles: list[dict], source
 
     st.subheader("🧭 Dashboard Orientation")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Data Source", "Live" if source == SOURCE_LIVE else "Lite fallback")
+    source_label = "Live" if source == SOURCE_LIVE else source.replace("_", " ").title()
+    c1.metric("Data Source", source_label)
     c2.metric("Window Trend", trend)
     c3.metric("Candles Loaded", f"{len(candles)}")
     st.caption("Core view: price trend, 24h move, participation, and order flow pressure.")
