@@ -94,7 +94,7 @@ def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
     candles: list[dict[str, Any]] = []
 
     for i in range(limit):
-        drift = (i - (limit / 2)) * FALLBACK_PRICE_DRIFT_PER_CANDLE
+        drift = (i - (limit // 2)) * FALLBACK_PRICE_DRIFT_PER_CANDLE
         open_price = base + drift
         close_price = open_price + (FALLBACK_UP_CANDLE_DELTA if i % 2 == 0 else FALLBACK_DOWN_CANDLE_DELTA)
         high_price = max(open_price, close_price) + FALLBACK_WICK_SIZE
@@ -123,7 +123,7 @@ def _build_lite_fallback_data(interval: str, limit: int) -> dict[str, Any]:
     first_close = candles[0]["close"]
     last_close = candles[-1]["close"]
     price_change = last_close - first_close
-    pct_change = (price_change / first_close * 100) if first_close else 0.0
+    pct_change = (price_change / first_close * 100) if first_close > 0 else 0.0
     total_volume = sum(c["volume"] for c in candles)
     quote_volume = sum(c["quote_volume"] for c in candles)
 
